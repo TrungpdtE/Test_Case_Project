@@ -1,0 +1,421 @@
+import java.util.*;
+import java.io.*;
+
+public class RatingManagement {
+    private ArrayList<Rating> ratings;
+    private ArrayList<Movie> movies;
+    private ArrayList<User> users;
+
+    // @Requirement 1
+    public RatingManagement(String moviePath, String ratingPath, String userPath) {
+        this.movies = loadMovies(moviePath);
+        this.users = loadUsers(userPath);
+        this.ratings = loadEdgeList(ratingPath);
+    }
+
+    //Done
+    private ArrayList<User> loadUsers(String userPath) {
+        ArrayList<User> NguoiDung = new ArrayList<>();
+
+        try {
+            File mofile = new File(userPath);
+            Scanner docfile = new Scanner(mofile);
+
+            //bỏ dòng đầu tiên đi
+            if (docfile.hasNextLine()) {
+                docfile.nextLine();
+            }
+
+            //tách thông tin rồi thêm vào arraylist đã tạo
+            while (docfile.hasNextLine()) {
+                String dong = docfile.nextLine();
+                String[] TachThongTin = dong.split(","); 
+                int Manguoixem = Integer.parseInt(TachThongTin[0]);
+                String GioiTinh = TachThongTin[1];
+                int Tuoi = Integer.parseInt(TachThongTin[2]);
+                String NgheNghiep = TachThongTin[3];
+                String zipCode = TachThongTin[4];
+                NguoiDung.add(new User(Manguoixem, GioiTinh, Tuoi, NgheNghiep, zipCode));
+            }
+
+            //đóng file
+            docfile.close();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return NguoiDung;
+    }
+
+    private ArrayList<Movie> loadMovies(String moviePath) {
+        ArrayList<Movie> movies = new ArrayList<>();
+
+        try {
+            File mofile = new File(moviePath);
+            Scanner docfile = new Scanner(mofile);
+
+            //Bỏ dòng đầu tiên đi
+            if (docfile.hasNextLine()) {
+                docfile.nextLine();
+            }
+
+            //tách thông tin rồi thêm vào arraylist đã tạo
+            while (docfile.hasNextLine()) {
+                String dong = docfile.nextLine();
+                String[] TachThongTin = dong.split(",");
+                int MaPhim = Integer.parseInt(TachThongTin[0]);
+                String TenPhim = TachThongTin[1];
+                //luu y---------------------------
+                ArrayList<String> Theloai = new ArrayList<>(Arrays.asList(TachThongTin[2].split("-")));
+                movies.add(new Movie(MaPhim, TenPhim, Theloai));
+            }
+
+            docfile.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        return movies;
+    }
+
+    public ArrayList<Rating> loadEdgeList(String ratingPath) {
+        ArrayList<Rating> ratings = new ArrayList<>();
+
+        try {
+            File mofile = new File(ratingPath);
+            Scanner docfile = new Scanner(mofile);
+            //bỏ dòng đầu đi
+            if (docfile.hasNextLine()) {
+                docfile.nextLine();
+            }
+            //tách thông tin rồi thêm vào arraylist
+            while (docfile.hasNextLine()) {
+                String dong = docfile.nextLine();
+                String[] TachThongTin = dong.split(",");
+                int MaNguoiXem = Integer.parseInt(TachThongTin[0]);
+                int MaPhim = Integer.parseInt(TachThongTin[1]);
+                int SaoDanhGia = Integer.parseInt(TachThongTin[2]);
+                long DauThoiGian = Long.parseLong(TachThongTin[3]);
+                ratings.add(new Rating(MaNguoiXem, MaPhim, SaoDanhGia, DauThoiGian));
+            }
+
+            docfile.close();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return ratings;
+    }
+    //khongchinhsua
+    public ArrayList<Movie> getMovies() {
+        return movies;
+    }
+    //khongchinhsua
+    public ArrayList<User> getUsers() {
+        return users;
+    }
+    //khongchinhsua
+    public ArrayList<Rating> getRating() {
+        return ratings;
+    }
+
+    // @Requirement 2
+    //DONE
+    public ArrayList<Movie> findMoviesByNameAndMatchRating(int userId, int rating) {
+        //tạo ra 2 arraylist để làn yeu cầu
+        ArrayList<Movie> DanhSachPhim = new ArrayList<>();
+        ArrayList<String> LuuTenPhim = new ArrayList<>();
+
+        //tìm phim theo yêu cầu
+        for (Rating timphim : ratings) {
+            if (timphim.getMaNguoiXem() == userId && timphim.getSaoDanhGia() >= rating) {
+                for (Movie movie : movies) {
+                    if (movie.getId() == timphim.getIDPhim()) {
+                        LuuTenPhim.add(movie.getName());
+                        break;
+                    }
+                }
+            }
+        }
+
+        //sắp xếp theo tên có
+        for (int i = 0; i < LuuTenPhim.size() - 1; i++) {
+            for (int j = 0; j < LuuTenPhim.size() - i - 1; j++) {
+                if (LuuTenPhim.get(j).compareTo(LuuTenPhim.get(j + 1)) > 0) {
+                    String temp = LuuTenPhim.get(j);
+                    LuuTenPhim.set(j, LuuTenPhim.get(j + 1));
+                    LuuTenPhim.set(j + 1, temp);
+                }
+            }
+        }
+        
+        //thêm vào arraylist dựa vào sắp xếp tên phim đã làm
+        for (String tenPhim : LuuTenPhim) {
+            for (Movie movie : movies) {
+                if (movie.getName().equals(tenPhim)) {
+                    DanhSachPhim.add(movie);
+                    break;
+                }
+            }
+        }
+
+        return DanhSachPhim;
+    }
+
+    // Requirement 3
+    //DONE
+    public ArrayList<User> findUsersHavingSameRatingWithUser(int userId, int movieId) {
+        ArrayList<User> DanhSachNguoiXem = new ArrayList<>();
+
+        boolean CheckDiemDanhGia=false;
+        int DiemDanhGia=0;
+
+        //tìm điểm đánh giá của người xem userId cho phim movieId
+        for (Rating danhgia:ratings) {
+            if (danhgia.getMaNguoiXem() == userId && danhgia.getIDPhim() == movieId) {
+                DiemDanhGia = danhgia.getSaoDanhGia();
+                CheckDiemDanhGia=true;
+                break;
+            }
+        }
+
+        //Tìm những người đánh giá cùng số sao cho film 
+        if (CheckDiemDanhGia) {
+            for (Rating danhgia:ratings) {
+                if (danhgia.getIDPhim() == movieId && danhgia.getSaoDanhGia() == DiemDanhGia) {
+                    for (User nguoiXem:users) {
+                        if (nguoiXem.getId() == danhgia.getMaNguoiXem()) {
+                            if(nguoiXem.getId() != userId){
+                                DanhSachNguoiXem.add(nguoiXem);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return DanhSachNguoiXem;
+    }
+
+    // Requirement 4
+    //DONE
+
+    public ArrayList<String> findMoviesMatchOccupationAndGender(String occupation, String gender, int k, int rating) {
+        ArrayList<String> LuuPhim = new ArrayList<>();
+        ArrayList<Integer> LuuMaPhim = new ArrayList<>();
+        ArrayList<User> NguoiDungSame = new ArrayList<>();
+
+        // Tìm những người cùng same giới và nghề, cùng phim và cùng số sao
+        for (User NguoiXEM : users) {
+            if (NguoiXEM.getOccupation().equals(occupation) && NguoiXEM.getGender().equals(gender)) {
+                NguoiDungSame.add(NguoiXEM);
+            }
+        }
+
+        // Lưu những phim mà những người trên đã xem và đánh giá điểm giống nhau
+        for (User user : NguoiDungSame) {
+            int userId = user.getId();
+            for (Rating abb : ratings) {
+                if (abb.getMaNguoiXem() == userId && abb.getSaoDanhGia() == rating) {
+                    int movieId = abb.getIDPhim();
+                    if (!LuuMaPhim.contains(movieId)) 
+                        LuuMaPhim.add(movieId); 
+                }
+            }
+        }
+
+        //Tìm tên phim lưu vào arraylist đã tạo
+        for (Integer movieId : LuuMaPhim) {
+            for (Movie movie : movies) {
+                if (movie.getId() == movieId) {
+                    LuuPhim.add(movie.getName());
+                    break;
+                }
+            }
+        }
+
+        // Sắp xếp theo tên
+        for (int i = 0; i < LuuPhim.size() - 1; i++) {
+            for (int j = 0; j < LuuPhim.size() - i - 1; j++) {
+                if (LuuPhim.get(j).compareTo(LuuPhim.get(j + 1)) > 0) {
+                    String temp = LuuPhim.get(j);
+                    LuuPhim.set(j, LuuPhim.get(j + 1));
+                    LuuPhim.set(j + 1, temp);
+                }
+            }
+        }
+
+        // Chỉ trả về k phim theo yêu cầu đề bài
+        ArrayList<String> Luukphim = new ArrayList<>();
+        int count = 0;
+        for (String movie : LuuPhim) {
+            Luukphim.add(movie);
+            count++;
+            if (count == k) {
+                break;
+            }
+        }
+
+        return Luukphim;
+    }
+
+
+    // @Requirement 6
+    public ArrayList<String> findMoviesByOccupationAndLessThanRating(String occupation, int k, int rating) {
+        ArrayList<String> LuuPhim = new ArrayList<>();
+        ArrayList<Integer> LuuMaPhim = new ArrayList<>();
+        ArrayList<User> NguoiDungSameNgheNghiep = new ArrayList<>();
+
+        //Tìm những người xem cùng nghề ngiệp
+        for (User NguoiXem : users) {
+            if (NguoiXem.getOccupation().equals(occupation)) {
+                NguoiDungSameNgheNghiep.add(NguoiXem);
+            }
+        }
+
+        //lưu mã phim của những người xem cùng nghèe nghiệp <rating lưu vào arralisth
+        for (User user : NguoiDungSameNgheNghiep) {
+            int userId = user.getId();
+            for (Rating abb : ratings) {
+                if (abb.getMaNguoiXem() == userId && abb.getSaoDanhGia() < rating) {
+                    int movieId = abb.getIDPhim();
+                    if (!LuuMaPhim.contains(movieId)) 
+                        LuuMaPhim.add(movieId); 
+                }
+            }
+        }
+
+        //Tim phim
+        for (Integer MaPhim : LuuMaPhim) {
+            for (Movie Phim : movies) {
+                if (Phim.getId() == MaPhim) {
+                    LuuPhim.add(Phim.getName());
+                    break;
+                }
+            }
+        }
+
+        //sắp xếp theo tên
+        for (int i = 0; i < LuuPhim.size() - 1; i++) {
+            for (int j = 0; j < LuuPhim.size() - i - 1; j++) {
+                if (LuuPhim.get(j).compareTo(LuuPhim.get(j + 1)) > 0) {
+                    String temp = LuuPhim.get(j);
+                    LuuPhim.set(j, LuuPhim.get(j + 1));
+                    LuuPhim.set(j + 1, temp);
+                }
+            }
+        }
+
+        //chỉ lấy k phim
+        ArrayList<String> Luukphim = new ArrayList<>();
+        int count = 0;
+        for (String Phim : LuuPhim) {
+            Luukphim.add(Phim);
+            count++;
+            if (count == k) {
+                break;
+            }
+        }
+        return Luukphim;
+    }
+
+    // @Requirement 7
+    public ArrayList<String> findMoviesMatchLatestMovieOf(int userId, int rating, int k) {
+        ArrayList<String> LuuPhim = new ArrayList<>();
+        ArrayList<Integer> LuuMaPhim = new ArrayList<>();
+        ArrayList<User> NguoiDungSameNgheNghiep = new ArrayList<>();        
+        //tìm những người xem cùng giới tính với người xem có UserID, không lưu người xem có UserID
+        for (User NguoiXem : users) {
+            if (NguoiXem.getGender().equals(users.get(userId).getGender())&& NguoiXem.getId() != userId) {
+                NguoiDungSameNgheNghiep.add(NguoiXem);
+            }
+        }
+
+
+        //Tìm những thể loại phim của bộ phim xem gần đây nhất (nghĩa là số timestamp lớn nhất) của người userId, lưu chúng vào arraylist TheLoai
+        ArrayList<String> TheLoai = new ArrayList<>();
+        long MaxTimeStamp = 0;
+        for (Rating danhgia : ratings) {
+            if (danhgia.getMaNguoiXem() == userId && danhgia.getDauThoiGian() > MaxTimeStamp) {
+                MaxTimeStamp = danhgia.getDauThoiGian();
+            }
+        } 
+        for (Rating danhgia : ratings) {
+            if (danhgia.getMaNguoiXem() == userId && danhgia.getDauThoiGian() == MaxTimeStamp) {
+                for (Movie phim : movies) {
+                    if (phim.getId() == danhgia.getIDPhim()) {
+                        for (String theloai : phim.getGenres()) {
+                            if (!TheLoai.contains(theloai)) {
+                                TheLoai.add(theloai);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //Bổ sung thêm cho tôi, thể loại của phim phải có ít nhất 1 thể loại trong arraylist TheLoai
+        for (User user : NguoiDungSameNgheNghiep) {
+            int userId1 = user.getId();
+            for (Rating abb : ratings) {
+                if (abb.getMaNguoiXem() == userId1 && abb.getSaoDanhGia() >= rating) {
+                    int movieId = abb.getIDPhim();
+                    if (!LuuMaPhim.contains(movieId)) {
+                        boolean hasMatchingGenre = false;
+                        for (Movie movie : movies) {
+                            if (movie.getId() == movieId) {
+                                for (String genre : movie.getGenres()) {
+                                    if (TheLoai.contains(genre)) {
+                                        hasMatchingGenre = true;
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        if (hasMatchingGenre) {
+                            LuuMaPhim.add(movieId);
+                        }
+                    }
+                }
+            }
+        }
+
+        
+        //Tim phim
+        for (Integer MaPhim : LuuMaPhim) {
+            for (Movie Phim : movies) {
+                if (Phim.getId() == MaPhim) {
+                    LuuPhim.add(Phim.getName());
+                    break;
+                }
+            }
+        }
+
+        //sắp xếp theo tên
+        for (int i = 0; i < LuuPhim.size() - 1; i++) {
+            for (int j = 0; j < LuuPhim.size() - i - 1; j++) {
+                if (LuuPhim.get(j).compareTo(LuuPhim.get(j + 1)) > 0) {
+                    String temp = LuuPhim.get(j);
+                    LuuPhim.set(j, LuuPhim.get(j + 1));
+                    LuuPhim.set(j + 1, temp);
+                }
+            }
+        }      
+
+        ArrayList<String> Luukphim = new ArrayList<>();
+        int count = 0;
+        for (String Phim : LuuPhim) {
+            Luukphim.add(Phim);
+            count++;
+            if (count == k) {
+                break;
+            }
+        }  
+              
+        return Luukphim;
+    }
+
+}
